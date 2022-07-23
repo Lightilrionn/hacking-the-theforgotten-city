@@ -5,6 +5,7 @@
 #include <cmath>
 using namespace std;
 #define PI 3.14159265
+//getting base address of a process. not my function
 DWORD_PTR GetProcessBaseAddress(DWORD processID)
 {
     DWORD_PTR   baseAddress = 0;
@@ -43,94 +44,117 @@ DWORD_PTR GetProcessBaseAddress(DWORD processID)
 
     return baseAddress;
 }
+//getting address from offset
 DWORD_PTR GetAddressPoiny(DWORD_PTR baseadress, vector<DWORD_PTR> offsets, DWORD_PTR addresstoadd, HANDLE hProc) {
     DWORD_PTR pointerNY;
+    //reading first address
     ReadProcessMemory(hProc, (LPVOID*)(baseadress + addresstoadd), &pointerNY, sizeof(pointerNY), NULL);
+    
+    //adding offsets and finding what addresses are there and then adding offsets to those
     for (int i = 0; i < offsets.size() - 1; i++) {
         ReadProcessMemory(hProc, (LPVOID*)(pointerNY + offsets[i]), &pointerNY, sizeof(pointerNY), NULL);
     }
+
+    //adding the last address that points to the value and not to a address
     pointerNY += offsets[offsets.size() - 1];
+
     return pointerNY;
 }
-int main(void) {
-    //TCHAR title[500];
-    //int i = 0;
-    //while (i < 10) {
-        //GetWindowText(GetForegroundWindow(), title, 500);
-        //printf("%s\n", title);
-        //i++;
-        //system("pause");
-    //}
-    
+//the same as above, but with vectors
+vector<DWORD_PTR> GetAddressVector(DWORD_PTR baseadress, vector<vector<DWORD_PTR>> offsets, vector<DWORD_PTR> addresstoadd, HANDLE hProc) {
+    vector<DWORD_PTR> pointerNY(offsets.size());
+    for(int i = 0; i < offsets.size(); i++) 
+        ReadProcessMemory(hProc, (LPVOID*)(baseadress + addresstoadd[i]), &pointerNY[i], sizeof(pointerNY[i]), NULL);
+    for(int j = 0; j < offsets.size(); j++) 
+        for (int i = 0; i < offsets[j].size() - 1; i++) 
+            ReadProcessMemory(hProc, (LPVOID*)(pointerNY[j] + offsets[j][i]), &pointerNY[j], sizeof(pointerNY[j]), NULL);
+    for(int i = 0; i < offsets.size(); i++) {
+        pointerNY[i] += offsets[i][offsets[i].size() - 1];
+    }
+    return pointerNY;
+}
+//creating a structure for coordinates
+struct coordinates{
+    float x, y, z;
+};
+//easier function for writing memory
+void writememory(float a, DWORD_PTR address, HANDLE hProc){
+    WriteProcessMemory(hProc, (LPVOID)address, &a, sizeof(a), NULL);
+}
+//easier function for reading memory
+void readmemory(float *a, DWORD_PTR address, HANDLE hProc){
+    ReadProcessMemory(hProc, (LPVOID)address, a, sizeof(*a), NULL);
+}
 
+int main(void) {
+    //finding window
     HWND hWnd = FindWindowA(NULL, "The Forgotten City  ");
     if (hWnd == 0) {
         cerr << "Could not find window." << endl;
     }
     else {
+        //getting access to window memory 
         DWORD PID;
         GetWindowThreadProcessId(hWnd, &PID);
         HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS , false, PID);
+
         if (!hProc) {
             cerr << "Cannot open process." << endl;
         }
         else {
+            //setting console cursor to invincible
             CONSOLE_CURSOR_INFO info;
             info.dwSize = 100;
             info.bVisible = false;
             SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
+
+            //getting base address
             DWORD_PTR baseadress = GetProcessBaseAddress(PID);
-            DWORD_PTR addresstoadd = 0x0419A7B0;
-            vector<DWORD_PTR> offsetsY = {0x60, 0x1D8};
-            vector<DWORD_PTR> offsetsX = { 0x60, 0x1D4 };
-            vector<DWORD_PTR> offsetsZ = { 0x60, 0x1D0 };
+
+            //getting coordinates and yaw addresses
+            vector<DWORD_PTR> addresstoadd = {0x0419A7B0, 0x0419A7B0, 0x0419A7B0};
+            vector<vector<DWORD_PTR>> offsetsxyz = {{ 0x60, 0x1D4 }, {0x60, 0x1D8}, { 0x60, 0x1D0 }};
             vector<DWORD_PTR> offsetsRightLeft = { 0x60, 0x194 };
-            float let = -0.01;
-            float hi = 0;
-            vector<DWORD_PTR> xyzaddress = { GetAddressPoiny(baseadress, offsetsX, addresstoadd, hProc), GetAddressPoiny(baseadress, offsetsY, addresstoadd, hProc), GetAddressPoiny(baseadress, offsetsZ, addresstoadd, hProc) };
-            DWORD_PTR rightLeftAdd = GetAddressPoiny(baseadress, offsetsRightLeft, addresstoadd, hProc);
-            vector<float> xyz = { 0, 0, 0 };
-            float rightLeftZ = 0;
-            float rightLeftX = 0;
+            vector<DWORD_PTR> xyzaddress = GetAddressVector(baseadress, offsetsxyz, addresstoadd, hProc);
+            DWORD_PTR yawaddress = GetAddressPoiny(baseadress, offsetsRightLeft, addresstoadd[0], hProc);
+
+            //declaring variables
+            coordinates coor;
+            float yaw = 0;
+
             while (!(GetAsyncKeyState(VK_BACK) & 0x8000)) {
-                ReadProcessMemory(hProc, (LPVOID)xyzaddress[0], &xyz[0], sizeof(xyz[1]), NULL);
-                ReadProcessMemory(hProc, (LPVOID)xyzaddress[1], &xyz[1], sizeof(xyz[1]), NULL);
-                ReadProcessMemory(hProc, (LPVOID)xyzaddress[2], &xyz[2], sizeof(xyz[1]), NULL);
-                ReadProcessMemory(hProc, (LPVOID)rightLeftAdd, &rightLeftZ, sizeof(rightLeftZ), NULL);
-                ReadProcessMemory(hProc, (LPVOID)rightLeftAdd, &rightLeftX, sizeof(rightLeftX), NULL);
-                rightLeftZ += 180;
-                rightLeftX += 180;
-                
-                cout << xyz[0] << "/" << xyz[1] << "/" << xyz[2];
-                if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
+                //getting varibles from game memory
+                readmemory(&coor.x, xyzaddress[0], hProc);
+                readmemory(&coor.y, xyzaddress[1], hProc);
+                readmemory(&coor.z, xyzaddress[2], hProc);
+                readmemory(&yaw, yawaddress, hProc);
 
-                }
-                if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
+                //adding to yaw 180, so it ranges from 360 to 0 and not from 180 to -180
+                yaw += 180;
 
-                }
+                cout << coor.x << "/" << coor.y << "/" << coor.z << "/" << yaw;
+                //checking if up arrow is pressed
                 if (GetAsyncKeyState(VK_UP) & 0x8000) {
-                    
-                    xyz[0] += -10*sin(rightLeftX * PI * 2 / 360);
-                    xyz[2] += -10 * cos(rightLeftZ * PI * 2 / 360);
-                    WriteProcessMemory(hProc, (LPVOID)xyzaddress[0], &xyz[0], sizeof(xyz[0]), NULL);
-                    WriteProcessMemory(hProc, (LPVOID)xyzaddress[2], &xyz[2], sizeof(xyz[2]), NULL);
+                    //math to get x and z coordinates from yaw
+                    coor.x += -10*sin(yaw * PI * 2 / 360);
+                    coor.z += -10 * cos(yaw * PI * 2 / 360);
+
+                    //writing to process memory
+                    writememory(coor.x, xyzaddress[0], hProc);
+                    writememory(coor.z, xyzaddress[2], hProc);
                 }
-                if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
-                    xyz[2] += rightLeftZ - 10;
-                    xyz[0] += rightLeftX - 10;
-                }
+                //waiting for 10 ms
                 Sleep(10);
-                std::cout << "\x1B[2J\x1B[H";
+
+                //clearing cmd output
+                cout << "\x1B[2J\x1B[H";
             }
+            //getting errors from win 32
             cout << GetLastError();
 
+            //closing handle
             CloseHandle(hProc);
-
-            cin.get();
-
         }
-
-    }
-    
+    } 
     return 0;
 }
