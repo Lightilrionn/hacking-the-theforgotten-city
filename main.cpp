@@ -5,6 +5,7 @@
 #include <cmath>
 using namespace std;
 #define PI 3.14159265
+#include <upgradehead.h>
 //getting base address of a process. not my function
 DWORD_PTR GetProcessBaseAddress(DWORD processID)
 {
@@ -44,6 +45,7 @@ DWORD_PTR GetProcessBaseAddress(DWORD processID)
 
     return baseAddress;
 }
+/*
 //getting address from offset
 DWORD_PTR GetAddressPoiny(DWORD_PTR baseadress, vector<DWORD_PTR> offsets, DWORD_PTR addresstoadd, HANDLE hProc) {
     DWORD_PTR pointerNY;
@@ -73,10 +75,12 @@ vector<DWORD_PTR> GetAddressVector(DWORD_PTR baseadress, vector<vector<DWORD_PTR
     }
     return pointerNY;
 }
+*/
 //creating a structure for coordinates
 struct coordinates{
     float x, y, z;
 };
+/*
 //easier function for writing memory
 void writememory(float a, DWORD_PTR address, HANDLE hProc){
     WriteProcessMemory(hProc, (LPVOID)address, &a, sizeof(a), NULL);
@@ -85,7 +89,7 @@ void writememory(float a, DWORD_PTR address, HANDLE hProc){
 void readmemory(float *a, DWORD_PTR address, HANDLE hProc){
     ReadProcessMemory(hProc, (LPVOID)address, a, sizeof(*a), NULL);
 }
-
+*/
 int main(void) {
     //finding window
     HWND hWnd = FindWindowA(NULL, "The Forgotten City  ");
