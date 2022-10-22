@@ -9,14 +9,22 @@ using namespace std;
 class MemPoint{
     private:
         DWORD_PTR baseadress;
-        vector<DWORD_PTR> addresstoadd;
+        DWORD_PTR addresstoadd;
         vector<DWORD_PTR> offsets;
         DWORD_PTR address;
+        HANDLE hProc;
     public:
-        MemPoint(DWORD_PTR baseadress, vector<DWORD_PTR> addresstoadd,vector<DWORD_PTR> offsets){
-            this.baseadress = baseadress;
-            this.addresstoadd = addresstoadd;
-            this.offsets=offsets;
+        void writememory(float a){
+            WriteProcessMemory(hProc, (LPVOID)address, &a, sizeof(a), NULL);
+        }
+        void readmemory(float *a){
+            ReadProcessMemory(hProc, (LPVOID)address, a, sizeof(*a), NULL);
+        }
+        MemPoint(DWORD_PTR baseadress1, DWORD_PTR addresstoadd1,vector<DWORD_PTR> offsets1,HANDLE hProc1){
+            baseadress = baseadress1;
+            addresstoadd = addresstoadd1;
+            offsets=offsets1;
+            hProc=hProc1;
             DWORD_PTR pointerNY;
             //reading first address
             ReadProcessMemory(hProc, (LPVOID*)(baseadress + addresstoadd), &pointerNY, sizeof(pointerNY), NULL);
@@ -29,13 +37,6 @@ class MemPoint{
             //adding the last address that points to the value and not to a address
             pointerNY += offsets[offsets.size() - 1];
 
-            this.address=pointerNY;
+            address=pointerNY;
         }
-        void writememory(float a, DWORD_PTR address, HANDLE hProc){
-            WriteProcessMemory(hProc, (LPVOID)address, &a, sizeof(a), NULL);
-        }
-        void readmemory(float *a, DWORD_PTR address, HANDLE hProc){
-            ReadProcessMemory(hProc, (LPVOID)address, a, sizeof(*a), NULL);
-        }
-        
 };

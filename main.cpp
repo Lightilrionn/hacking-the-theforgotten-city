@@ -5,7 +5,7 @@
 #include <cmath>
 using namespace std;
 #define PI 3.14159265
-#include <upgradehead.h>
+#include "upgradehead.h"
 //getting base address of a process. not my function
 DWORD_PTR GetProcessBaseAddress(DWORD processID)
 {
@@ -116,27 +116,26 @@ int main(void) {
             DWORD_PTR baseadress = GetProcessBaseAddress(PID);
 
             //getting coordinates and yaw addresses
+            
             vector<DWORD_PTR> addresstoadd = {0x0419A7B0, 0x0419A7B0, 0x0419A7B0};
             vector<vector<DWORD_PTR>> offsetsxyz = {{ 0x60, 0x1D4 }, {0x60, 0x1D8}, { 0x60, 0x1D0 }};
             vector<DWORD_PTR> offsetsRightLeft = { 0x60, 0x194 };
-            vector<DWORD_PTR> xyzaddress = GetAddressVector(baseadress, offsetsxyz, addresstoadd, hProc);
-            DWORD_PTR yawaddress = GetAddressPoiny(baseadress, offsetsRightLeft, addresstoadd[0], hProc);
-
+            vector<MemPoint> pointsxyz = {MemPoint(baseadress, addresstoadd[0], offsetsxyz[0], hProc), MemPoint(baseadress, addresstoadd[1], offsetsxyz[1], hProc), MemPoint(baseadress, addresstoadd[2], offsetsxyz[2], hProc)};
+            MemPoint pointyaw(baseadress, addresstoadd[0], offsetsRightLeft, hProc);
             //declaring variables
             coordinates coor;
             float yaw = 0;
 
             while (!(GetAsyncKeyState(VK_BACK) & 0x8000)) {
                 //getting varibles from game memory
-                readmemory(&coor.x, xyzaddress[0], hProc);
-                readmemory(&coor.y, xyzaddress[1], hProc);
-                readmemory(&coor.z, xyzaddress[2], hProc);
-                readmemory(&yaw, yawaddress, hProc);
-
+                pointsxyz[0].readmemory(&coor.x);
+                pointsxyz[1].readmemory(&coor.y);
+                pointsxyz[2].readmemory(&coor.z);
+                pointyaw.readmemory(&yaw);
                 //adding to yaw 180, so it ranges from 360 to 0 and not from 180 to -180
                 yaw += 180;
 
-                cout << coor.x << "/" << coor.y << "/" << coor.z << "/" << yaw;
+                cout << coor.x << "/" << coor.y << "/" << coor.z << "/" << yaw << "/";
                 //checking if up arrow is pressed
                 if (GetAsyncKeyState(VK_UP) & 0x8000) {
                     //math to get x and z coordinates from yaw
@@ -144,14 +143,14 @@ int main(void) {
                     coor.z += -10 * cos(yaw * PI * 2 / 360);
 
                     //writing to process memory
-                    writememory(coor.x, xyzaddress[0], hProc);
-                    writememory(coor.z, xyzaddress[2], hProc);
+                    pointsxyz[0].writememory(coor.x);
+                    pointsxyz[2].writememory(coor.z);
                 }
                 //waiting for 10 ms
                 Sleep(10);
 
                 //clearing cmd output
-                cout << "\x1B[2J\x1B[H";
+                system("cls");
             }
             //getting errors from win 32
             cout << GetLastError();
